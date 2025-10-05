@@ -24,5 +24,11 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
+  },
+
+  vite: {
+    build: {
+      sourcemap: false
+    }
   }
 })
