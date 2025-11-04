@@ -1,0 +1,334 @@
+<script setup lang="ts">
+import type { Instance } from '../../shared/types/Instance'
+import { useInstancesStore } from '../stores/instances'
+import { useInstanciaAtualStore } from '../stores/instanciaAtual'
+
+// Props
+interface Props {
+  instance: Instance
+  serverUrl?: string | null
+  adminToken?: string | null
+}
+
+const props = defineProps<Props>()
+
+// Stores
+const instancesStore = useInstancesStore()
+const instanciaAtualStore = useInstanciaAtualStore()
+
+// Composables
+const toast = useToast()
+
+// Estados dos campos administrativos
+const adminField01 = ref(props.instance.adminField01 || '')
+const adminField02 = ref(props.instance.adminField02 || '')
+const isSaving = ref(false)
+
+// Função para formatar data
+function formatDate(dateString: string | undefined) {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  return {
+    date: date.toLocaleDateString('pt-BR'),
+    time: date.toLocaleTimeString('pt-BR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+}
+
+// Função para determinar a cor do status
+function getStatusColor(status: string) {
+  switch (status.toLowerCase()) {
+    case 'connected':
+      return 'success'
+    case 'disconnected':
+      return 'error'
+    case 'connecting':
+      return 'warning'
+    default:
+      return 'neutral'
+  }
+}
+
+// Função para obter o label do status
+function getStatusLabel(status: string) {
+  switch (status.toLowerCase()) {
+    case 'connected':
+      return 'Conectado'
+    case 'disconnected':
+      return 'Desconectado'
+    case 'connecting':
+      return 'Conectando'
+    default:
+      return status
+  }
+}
+
+// Função para copiar token
+async function copyToken() {
+  try {
+    await navigator.clipboard.writeText(props.instance.token)
+    toast.add({
+      title: 'Token copiado!',
+      description: `Token da instância ${props.instance.name} copiado para a área de transferência`,
+      icon: 'i-lucide-check-circle',
+      color: 'success'
+    })
+  } catch (error) {
+    toast.add({
+      title: 'Erro ao copiar',
+      description: 'Não foi possível copiar o token para a área de transferência',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'  
+    })
+  }
+}
+
+// Função para salvar campos administrativos
+async function saveAdminFields() {
+  if (!props.serverUrl || !props.adminToken) {
+    toast.add({
+      title: 'Erro de configuração',
+      description: 'Server URL ou Admin Token não fornecidos',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  isSaving.value = true
+
+  try {
+    const result = await instancesStore.updateAdminFields(
+      props.serverUrl,
+      props.adminToken,
+      props.instance.id,
+      adminField01.value,
+      adminField02.value
+    )
+
+    if (result.success) {
+      // Atualizar a instância no store principal de instâncias
+      const updatedInstance = {
+        ...props.instance,
+        adminField01: adminField01.value,
+        adminField02: adminField02.value
+      }
+      
+      instancesStore.updateInstance(updatedInstance)
+      
+      // Atualizar também o store da instância atual
+      instanciaAtualStore.setInstancia(updatedInstance)
+
+      toast.add({
+        title: 'Campos salvos!',
+        description: 'Os campos administrativos foram atualizados com sucesso',
+        icon: 'i-lucide-check-circle',
+        color: 'success'
+      })
+    } else {
+      toast.add({
+        title: 'Erro ao salvar',
+        description: result.error || 'Ocorreu um erro ao salvar os campos',
+        icon: 'i-lucide-alert-circle',
+        color: 'error'
+      })
+    }
+  } catch (error) {
+    toast.add({
+      title: 'Erro inesperado',
+      description: 'Ocorreu um erro inesperado ao salvar os campos',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// Verificar se os campos foram alterados
+const hasChanges = computed(() => {
+  return adminField01.value !== (props.instance.adminField01 || '') ||
+         adminField02.value !== (props.instance.adminField02 || '')
+})
+</script>
+
+<template>
+  <div class="space-y-6">
+    <!-- Informações Básicas -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+        Informações Básicas
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Número
+          </label>
+          <p class="mt-1 text-sm font-mono text-gray-900 dark:text-white">
+            {{ instance.owner }}
+          </p>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Nome da Instância
+          </label>
+          <p class="mt-1 text-sm text-gray-900 dark:text-white">
+            {{ instance.name }}
+          </p>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Nome do Perfil
+          </label>
+          <p class="mt-1 text-sm text-gray-900 dark:text-white">
+            {{ instance.profileName || '-' }}
+          </p>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Tipo de Conta
+          </label>
+          <div class="mt-1">
+            <UBadge 
+              :color="instance.isBusiness ? 'primary' : 'neutral'"
+              variant="subtle"
+            >
+              {{ instance.isBusiness ? 'Business' : 'Personal' }}
+            </UBadge>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Plataforma
+          </label>
+          <p class="mt-1 text-sm text-gray-900 dark:text-white">
+            {{ instance.plataform || '-' }}
+          </p>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Status
+          </label>
+          <div class="mt-1">
+            <UBadge 
+              :color="getStatusColor(instance.status)"
+              variant="subtle"
+              class="capitalize"
+            >
+              {{ getStatusLabel(instance.status) }}
+            </UBadge>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Datas -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+        Histórico de Conexão
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Criada em
+          </label>
+          <div class="mt-1" v-if="formatDate(instance.created)">
+            <p class="text-sm font-medium text-gray-900 dark:text-white">
+              {{ formatDate(instance.created)?.date }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ formatDate(instance.created)?.time }}
+            </p>
+          </div>
+          <p v-else class="mt-1 text-sm text-gray-500 dark:text-gray-400">-</p>
+        </div>
+        <div v-if="instance.lastDisconnect">
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Última Desconexão
+          </label>
+          <div class="mt-1" v-if="formatDate(instance.lastDisconnect)">
+            <p class="text-sm font-medium text-gray-900 dark:text-white">
+              {{ formatDate(instance.lastDisconnect)?.date }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ formatDate(instance.lastDisconnect)?.time }}
+            </p>
+          </div>
+          <p v-else class="mt-1 text-sm text-gray-500 dark:text-gray-400">-</p>
+        </div>
+      </div>
+      
+      <div v-if="instance.lastDisconnectReason" class="mt-4">
+        <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          Motivo da Última Desconexão
+        </label>
+        <p class="mt-1 text-sm text-gray-900 dark:text-white">
+          {{ instance.lastDisconnectReason }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Campos Administrativos -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+        Campos Administrativos
+      </h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Campo Administrativo 1
+          </label>
+          <UInput
+            v-model="adminField01"
+            placeholder="Digite o valor do campo 1..."
+            class="w-full"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Campo Administrativo 2
+          </label>
+          <UInput
+            v-model="adminField02"
+            placeholder="Digite o valor do campo 2..."
+            class="w-full"
+          />
+        </div>
+        <div class="flex justify-end">
+          <UButton
+            color="primary"
+            icon="i-lucide-save"
+            :loading="isSaving"
+            :disabled="!hasChanges"
+            @click="saveAdminFields"
+          >
+            {{ isSaving ? 'Salvando...' : 'Salvar Dados' }}
+          </UButton>
+        </div>
+      </div>
+    </div>
+
+    <!-- Token -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+        Token de Acesso
+      </h3>
+      <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <code class="flex-1 text-xs font-mono text-gray-900 dark:text-white break-all">
+          {{ instance.token }}
+        </code>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="xs"
+          icon="i-lucide-copy"
+          @click="copyToken"
+        >
+          Copiar
+        </UButton>
+      </div>
+    </div>
+  </div>
+</template>

@@ -2,6 +2,8 @@
 import { h, resolveComponent } from 'vue'
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { Instance } from '../../shared/types/Instance'
+import { useInstancesStore } from '../stores/instances'
+import { useInstanciaAtualStore } from '../stores/instanciaAtual'
 
 const UAvatar = resolveComponent('UAvatar')
 const UBadge = resolveComponent('UBadge')
@@ -14,43 +16,48 @@ interface Props {
   instances: readonly Instance[]
   loading: boolean
   error: string | null
+  serverUrl?: string
+  adminToken?: string
 }
 
 const props = defineProps<Props>()
 
+// Definir emits
+const emit = defineEmits<{
+  createInstance: []
+  refreshInstances: []
+}>()
+
 // Estado para o filtro de pesquisa
-const searchToken = ref('')
+const searchQuery = ref('')
 
-// Estado para o modal de instância
-const showModal = ref(false)
-const selectedInstance = ref<Instance | null>(null)
+// Removed modal state variables - now using navigation
 
-// Função para abrir modal com detalhes da instância
-function openInstanceModal(row: TableRow<Instance>) {
-  console.log('Abrindo modal para instância:', row.original.name)
-  console.log('Estado atual do modal antes:', showModal.value)
-  console.log('Instância selecionada antes:', selectedInstance.value)
+// Stores Pinia
+const instancesStore = useInstancesStore()
+const instanciaAtualStore = useInstanciaAtualStore()
+
+// Função para navegar para página da instância
+function openInstancePage(row: TableRow<Instance>) {
+  const instance = row.original
+  console.log('Navegando para página da instância:', instance.name)
   
-  selectedInstance.value = row.original
-  showModal.value = true
+  // Definir a instância atual no store com informações do servidor
+  if (props.serverUrl && props.adminToken) {
+    instanciaAtualStore.setInstanciaWithServer(instance, props.serverUrl, props.adminToken)
+  } else {
+    instanciaAtualStore.setInstancia(instance)
+  }
   
-  console.log('Estado atual do modal depois:', showModal.value)
-  console.log('Instância selecionada depois:', selectedInstance.value)
+  // Navegar para a página da instância
+  navigateTo(`/instancia/${instance.id}`)
 }
 
 
 
-// Computed para filtrar instâncias por token
+// Computed para filtrar instâncias por nome, perfil ou token
 const filteredInstances = computed(() => {
-  if (!props.instances) return []
-  
-  if (!searchToken.value.trim()) {
-    return [...props.instances]
-  }
-  
-  return props.instances.filter(instance => 
-    instance.token.toLowerCase().includes(searchToken.value.toLowerCase().trim())
-  )
+  return instancesStore.filteredInstances(searchQuery.value)
 })
 
 // Estado para controlar a ordenação
@@ -65,10 +72,11 @@ const sortedInstances = computed(() => {
   return [...filteredInstances.value]
 })
 
-// Computed para contar status
+// Computed para contar status usando o store
 const statusCounts = computed(() => {
-  const connected = filteredInstances.value.filter(i => i.status.toLowerCase() === 'connected').length
-  const total = filteredInstances.value.length
+  const filtered = filteredInstances.value
+  const connected = filtered.filter((i: Instance) => i.status.toLowerCase() === 'connected').length
+  const total = filtered.length
   const disconnected = total - connected
   
   return { connected, disconnected, total }
@@ -264,53 +272,75 @@ function getStatusLabel(status: string) {
       return status
   }
 }
+
+// Handler para quando uma instância for atualizada
+const handleInstanceUpdated = () => {
+  // Emitir evento para o componente pai recarregar as instâncias
+  emit('refreshInstances')
+}
 </script>
 
 <template>
   <div class="space-y-4">
-    <!-- Header da seção -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-          Instâncias WhatsApp
-        </h3>
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-          Lista de todas as instâncias ativas no servidor · Clique em uma linha para ver detalhes
-        </p>
-      </div>
-      
-      <!-- Badges com estatísticas -->
-      <div v-if="!loading && !error" class="flex items-center gap-2">
-        <UBadge variant="subtle" color="success">
-          {{ statusCounts.connected }} conectada{{ statusCounts.connected !== 1 ? 's' : '' }}
-        </UBadge>
-        <UBadge variant="subtle" color="error">
-          {{ statusCounts.disconnected }} desconectada{{ statusCounts.disconnected !== 1 ? 's' : '' }}
-        </UBadge>
-        <UBadge variant="subtle" color="neutral">
-          {{ statusCounts.total }} total
-        </UBadge>
-      </div>
+    <!-- Badges com estatísticas -->
+    <div v-if="!loading && !error" class="flex items-center justify-end gap-2">
+      <UBadge variant="subtle" color="success">
+        {{ statusCounts.connected }} conectada{{ statusCounts.connected !== 1 ? 's' : '' }}
+      </UBadge>
+      <UBadge variant="subtle" color="error">
+        {{ statusCounts.disconnected }} desconectada{{ statusCounts.disconnected !== 1 ? 's' : '' }}
+      </UBadge>
+      <UBadge variant="subtle" color="neutral">
+        {{ statusCounts.total }} total
+      </UBadge>
     </div>
 
-    <!-- Campo de pesquisa -->
-    <div v-if="!loading && !error && props.instances.length > 0" class="flex items-center gap-3">
-      <UInput
-        v-model="searchToken"
-        placeholder="Pesquisar por token..."
-        icon="i-lucide-search"
-        class="flex-1 max-w-sm"
-      />
-      <UButton
-        v-if="searchToken"
-        color="neutral"
-        variant="ghost"
-        icon="i-lucide-x"
-        size="sm"
-        @click="searchToken = ''"
-      >
-        Limpar
-      </UButton>
+    <!-- Campo de pesquisa e botões -->
+    <div v-if="!loading && !error" class="flex items-center justify-between gap-3">
+      <div v-if="props.instances.length > 0" class="flex items-center gap-3">
+        <UInput
+          v-model="searchQuery"
+          placeholder="Pesquisar por nome, perfil ou token..."
+          icon="i-lucide-search"
+          class="w-80"
+        />
+        <UButton
+          v-if="searchQuery"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-x"
+          size="sm"
+          @click="searchQuery = ''"
+        >
+          Limpar
+        </UButton>
+      </div>
+      
+      <!-- Div vazia para manter os botões à direita quando não há input -->
+      <div v-else></div>
+      
+      <div class="flex items-center gap-2">
+        <UButton 
+          color="neutral" 
+          size="lg" 
+          icon="i-lucide-refresh-cw"
+          variant="outline"
+          class="cursor-pointer hover:cursor-pointer"
+          :loading="loading"
+          @click="emit('refreshInstances')"
+        >
+          Atualizar
+        </UButton>
+        <UButton 
+          color="primary" 
+          size="lg" 
+          icon="i-lucide-plus"
+          class="cursor-pointer hover:cursor-pointer"
+          @click="emit('createInstance')"
+        >
+          Criar Instância
+        </UButton>
+      </div>
     </div>
 
     <!-- Tabela -->
@@ -342,25 +372,25 @@ function getStatusLabel(status: string) {
       <div v-else-if="sortedInstances.length === 0" class="flex items-center justify-center py-8">
         <div class="text-center">
           <UIcon 
-            :name="searchToken ? 'i-lucide-search-x' : 'i-lucide-smartphone'" 
+            :name="searchQuery ? 'i-lucide-search-x' : 'i-lucide-smartphone'" 
             class="w-8 h-8 text-gray-400 mx-auto mb-3" 
           />
           <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-1">
-            {{ searchToken ? 'Nenhuma instância encontrada' : 'Nenhuma instância encontrada' }}
+            {{ searchQuery ? 'Nenhuma instância encontrada' : 'Nenhuma instância encontrada' }}
           </h4>
           <p class="text-sm text-gray-600 dark:text-gray-400">
-            {{ searchToken 
-              ? `Nenhuma instância possui o token "${searchToken}"` 
+            {{ searchQuery 
+              ? `Nenhuma instância corresponde à busca "${searchQuery}"` 
               : 'Este servidor não possui instâncias WhatsApp ativas' 
             }}
           </p>
           <UButton
-            v-if="searchToken"
+            v-if="searchQuery"
             color="neutral"
             variant="outline"
             size="sm"
             class="mt-3"
-            @click="searchToken = ''"
+            @click="searchQuery = ''"
           >
             Limpar pesquisa
           </UButton>
@@ -375,14 +405,10 @@ function getStatusLabel(status: string) {
         :columns="columns"
         class="w-full"
         :ui="{ tr: 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50' }"
-        @select="openInstanceModal"
+        @select="openInstancePage"
       />
     </UCard>
 
-    <!-- Modal de detalhes da instância -->
-    <InstanciaModal
-      :instance="selectedInstance"
-      v-model:open="showModal"
-    />
+    <!-- Modal removido - agora navegamos para a página da instância -->
   </div>
 </template>

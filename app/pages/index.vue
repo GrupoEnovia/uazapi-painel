@@ -62,16 +62,30 @@ const handleModalSubmit = (serverData: CreateServerRequest) => {
           </p>
         </div>
         
-        <!-- Botão para adicionar servidor -->
-        <UButton 
-          color="primary" 
-          size="lg" 
-          icon="i-heroicons-plus"
-          class="cursor-pointer hover:cursor-pointer"
-          @click="handleAddServer"
-        >
-          Adicionar Servidor
-        </UButton>
+        <div class="flex gap-3">
+          <!-- Botão temporário para testar a nova página -->
+          <NuxtLink to="/instancia/teste123">
+            <UButton 
+              color="secondary" 
+              size="lg" 
+              icon="i-lucide-smartphone"
+              variant="outline"
+            >
+              Ver Instância (Teste)
+            </UButton>
+          </NuxtLink>
+          
+          <!-- Botão para adicionar servidor -->
+          <UButton 
+            color="primary" 
+            size="lg" 
+            icon="i-heroicons-plus"
+            class="cursor-pointer hover:cursor-pointer"
+            @click="handleAddServer"
+          >
+            Adicionar Servidor
+          </UButton>
+        </div>
       </div>
 
       <!-- Lista de servidores -->

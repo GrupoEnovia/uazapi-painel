@@ -16,3 +16,13 @@
   --color-green-900: #0A5331;
   --color-green-950: #052E16;
 }
+
+/* Cursor pointer para elementos clicáveis */
+button,
+a,
+[role="button"],
+[role="tab"],
+.clickable,
+[onclick] {
+  cursor: pointer !important;
+}

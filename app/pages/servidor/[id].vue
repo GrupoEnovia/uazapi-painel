@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Server } from '../../../shared/types/Server'
+import type { CreateInstanceRequest } from '../../../shared/types/CreateInstance'
+import { useInstancesStore } from '../../stores/instances'
 
 // Página de detalhes do servidor
 const route = useRoute()
@@ -9,8 +11,11 @@ const serverId = route.params.id as string
 const { servers } = useServers()
 const server = computed(() => servers.value.find(s => s.id === serverId))
 
-// Buscar instâncias do servidor
-const { instances, loading, error, fetchInstances, clearInstances } = useInstances()
+// Stores Pinia
+const instancesStore = useInstancesStore()
+
+// Toast para notificações
+const toast = useToast()
 
 // Se servidor não encontrado, redirecionar para home
 watchEffect(() => {
@@ -26,12 +31,20 @@ useHead({
   title: computed(() => server.value ? `${server.value.nome} - Detalhes do Servidor` : 'Carregando...')
 })
 
-// Watcher para buscar instâncias quando o servidor mudar
-watchEffect(() => {
+// Carregar instâncias apenas uma vez quando a página for montada
+onMounted(async () => {
+  // Aguardar os servidores carregarem
+  await nextTick()
+  
   if (server.value && server.value.serverUrl && server.value.adminToken) {
-    fetchInstances(server.value.serverUrl, server.value.adminToken)
-  } else {
-    clearInstances()
+    console.log('Página do servidor montada, verificando necessidade de buscar instâncias...')
+    // Só buscar se realmente não há dados
+    if (instancesStore.instances.length === 0) {
+      console.log('Nenhuma instância no store, buscando...')
+      instancesStore.fetchInstancesIfNeeded(server.value.serverUrl, server.value.adminToken)
+    } else {
+      console.log('Instâncias já existem no store, pulando busca')
+    }
   }
 })
 
@@ -84,6 +97,75 @@ const dropdownItems = computed(() => {
     }))
   ]
 })
+
+// Estado do modal de criar instância
+const isCreateInstanceModalOpen = ref(false)
+
+// Handler para criar nova instância
+const handleCreateInstance = () => {
+  if (server.value?.adminToken && server.value?.serverUrl) {
+    isCreateInstanceModalOpen.value = true
+  } else {
+    console.warn('Servidor não possui adminToken ou serverUrl configurados')
+  }
+}
+
+// Handler para refresh das instâncias (sempre busca, mesmo se já tem dados)
+const handleRefreshInstances = () => {
+  if (server.value && server.value.serverUrl && server.value.adminToken) {
+    console.log('Refresh manual solicitado, buscando instâncias...')
+    instancesStore.fetchInstances(server.value.serverUrl, server.value.adminToken)
+  }
+}
+
+// Handler para submeter criação de instância
+const handleCreateInstanceSubmit = async (instanceData: CreateInstanceRequest) => {
+  if (!server.value?.adminToken || !server.value?.serverUrl) {
+    toast.add({
+      title: 'Erro de configuração',
+      description: 'Servidor não possui adminToken ou serverUrl configurados',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  try {
+    const result = await instancesStore.createInstance(
+      server.value.serverUrl,
+      server.value.adminToken,
+      instanceData
+    )
+
+    if (result.success) {
+      // Fechar modal
+      isCreateInstanceModalOpen.value = false
+      
+      // Mostrar notificação de sucesso
+      toast.add({
+        title: 'Instância criada com sucesso!',
+        description: `A instância "${instanceData.name}" foi criada no servidor ${server.value.nome}`,
+        icon: 'i-lucide-check-circle',
+        color: 'success'
+      })
+    } else {
+      // Mostrar erro
+      toast.add({
+        title: 'Erro ao criar instância',
+        description: result.error || 'Ocorreu um erro inesperado',
+        icon: 'i-lucide-alert-circle',
+        color: 'error'
+      })
+    }
+  } catch (err) {
+    toast.add({
+      title: 'Erro inesperado',
+      description: 'Ocorreu um erro ao tentar criar a instância',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+  }
+}
 </script>
 
 <template>
@@ -162,14 +244,28 @@ const dropdownItems = computed(() => {
             </div>
           </div>
         </div>
+      
 
         <!-- Tabela de instâncias -->
         <InstanceTable
-          :instances="instances"
-          :loading="loading"
-          :error="error"
+          :instances="instancesStore.instances"
+          :loading="instancesStore.loading"
+          :error="instancesStore.error"
+          :server-url="server?.serverUrl"
+          :admin-token="server?.adminToken"
+          @create-instance="handleCreateInstance"
+          @refresh-instances="handleRefreshInstances"
         />
       </div>
     </div>
+
+    <!-- Modal para criar instância -->
+    <CreateInstanceModal
+      v-if="server && server.adminToken && server.serverUrl"
+      v-model:open="isCreateInstanceModalOpen"
+      :admin-token="server.adminToken"
+      :server-url="server.serverUrl"
+      @submit="handleCreateInstanceSubmit"
+    />
   </NuxtLayout>
 </template>
