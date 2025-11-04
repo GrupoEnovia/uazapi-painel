@@ -1,5 +1,10 @@
 <script setup lang="ts">
 // Componente Header da aplicação
+
+// Define os eventos que o componente pode emitir
+defineEmits<{
+  'open-about': []
+}>()
 </script>
 
 <template>
@@ -25,6 +30,14 @@
             <span>Documentação</span>
             <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-4 h-4" />
           </a>
+          
+          <button 
+            @click="$emit('open-about')"
+            class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center space-x-1"
+          >
+            <span>Sobre</span>
+            <UIcon name="i-heroicons-information-circle" class="w-4 h-4" />
+          </button>
         </nav>
       </div>
     </template>

@@ -13,7 +13,7 @@ const handleOpenAbout = () => {
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
     <!-- Header -->
-    <AppHeader />
+    <AppHeader @open-about="handleOpenAbout" />
 
     <!-- Conteúdo principal -->
     <main class="flex-1">
