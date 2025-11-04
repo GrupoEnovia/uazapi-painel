@@ -18,7 +18,7 @@ Painel web para gerenciamento de instâncias do UAZAPI, permitindo:
 
 ## 🚀 Tecnologias Utilizadas
 
-- **[Nuxt 3](https://nuxt.com/)** - Framework Vue.js para aplicações web
+- **[Nuxt 4](https://nuxt.com/)** - Framework Vue.js para aplicações web
 - **[Vue.js 3](https://vuejs.org/)** - Framework JavaScript reativo
 - **[TypeScript](https://www.typescriptlang.org/)** - Superset tipado do JavaScript
 - **[Nuxt UI](https://ui.nuxt.com/)** - Biblioteca de componentes para Nuxt
