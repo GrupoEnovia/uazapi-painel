@@ -26,6 +26,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   createInstance: []
   refreshInstances: []
+  openGlobalWebhook: []
 }>()
 
 // Estado para o filtro de pesquisa
@@ -320,6 +321,16 @@ const handleInstanceUpdated = () => {
       <div v-else></div>
       
       <div class="flex items-center gap-2">
+        <UButton 
+          color="secondary" 
+          size="lg" 
+          icon="i-lucide-webhook"
+          variant="outline"
+          class="cursor-pointer hover:cursor-pointer"
+          @click="emit('openGlobalWebhook')"
+        >
+          Webhook Global
+        </UButton>
         <UButton 
           color="neutral" 
           size="lg" 

@@ -18,11 +18,16 @@ const instanciaAtualStore = useInstanciaAtualStore()
 
 // Composables
 const toast = useToast()
+const router = useRouter()
 
 // Estados dos campos administrativos
 const adminField01 = ref(props.instance.adminField01 || '')
 const adminField02 = ref(props.instance.adminField02 || '')
 const isSaving = ref(false)
+
+// Estados para deletar instância
+const showDeleteConfirmation = ref(false)
+const isDeleting = ref(false)
 
 // Função para formatar data
 function formatDate(dateString: string | undefined) {
@@ -152,6 +157,74 @@ const hasChanges = computed(() => {
   return adminField01.value !== (props.instance.adminField01 || '') ||
          adminField02.value !== (props.instance.adminField02 || '')
 })
+
+// Função para abrir modal de confirmação de exclusão
+const handleDeleteClick = () => {
+  showDeleteConfirmation.value = true
+}
+
+// Função para deletar instância
+const handleDeleteInstance = async () => {
+  if (!props.serverUrl || !props.adminToken) {
+    toast.add({
+      title: 'Erro de configuração',
+      description: 'Server URL ou Admin Token não fornecidos',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  isDeleting.value = true
+
+  try {
+    const result = await instancesStore.deleteInstance(
+      props.serverUrl,
+      props.instance.token,
+      props.instance.id
+    )
+
+    if (result.success) {
+      toast.add({
+        title: 'Instância deletada!',
+        description: `A instância ${props.instance.name} foi deletada com sucesso`,
+        icon: 'i-lucide-check-circle',
+        color: 'success'
+      })
+
+      // Limpar instância atual do store
+      instanciaAtualStore.clearInstancia()
+
+      // Aguardar um pouco para o usuário ver a notificação
+      setTimeout(() => {
+        // Voltar para a página anterior (provavelmente a página do servidor)
+        if (window.history.length > 1) {
+          router.back()
+        } else {
+          // Se não há histórico, vai para a página inicial
+          router.push('/')
+        }
+      }, 1500)
+
+    } else {
+      toast.add({
+        title: 'Erro ao deletar',
+        description: result.error || 'Ocorreu um erro ao deletar a instância',
+        icon: 'i-lucide-alert-circle',
+        color: 'error'
+      })
+      isDeleting.value = false
+    }
+  } catch (error) {
+    toast.add({
+      title: 'Erro inesperado',
+      description: 'Ocorreu um erro inesperado ao deletar a instância',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    isDeleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -330,5 +403,36 @@ const hasChanges = computed(() => {
         </UButton>
       </div>
     </div>
+
+    <!-- Área de Perigo -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-800 p-6">
+      <h3 class="text-lg font-medium text-red-600 dark:text-red-400 mb-2 flex items-center gap-2">
+        <UIcon name="i-lucide-alert-triangle" class="w-5 h-5" />
+        Área de Perigo
+      </h3>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        Ações irreversíveis que afetam permanentemente esta instância.
+      </p>
+      <UButton
+        color="error"
+        icon="i-lucide-trash-2"
+        :loading="isDeleting"
+        @click="handleDeleteClick"
+      >
+        {{ isDeleting ? 'Deletando...' : 'Deletar Instância' }}
+      </UButton>
+    </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmationModal
+      v-model:open="showDeleteConfirmation"
+      title="Deletar Instância"
+      :message="`Tem certeza que deseja deletar a instância '${instance.name}'? Esta ação não pode ser desfeita.`"
+      confirm-text="Deletar"
+      cancel-text="Cancelar"
+      confirm-color="error"
+      icon="i-lucide-alert-triangle"
+      @confirm="handleDeleteInstance"
+    />
   </div>
 </template>

@@ -361,6 +361,168 @@ export const useInstancesStore = defineStore('instances', {
       } finally {
         this.setLoading(false)
       }
+    },
+
+    // Ação para deletar instância
+    async deleteInstance(serverUrl: string, instanceToken: string, instanceId: string) {
+      this.setLoading(true)
+      this.setError(null)
+
+      try {
+        console.log('Deletando instância:', instanceId)
+        
+        const response = await $fetch(`${serverUrl}/instance`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'token': instanceToken
+          }
+        })
+
+        console.log('Instância deletada:', response)
+        
+        // Remover a instância do store após sucesso
+        this.removeInstance(instanceId)
+        
+        return { success: true, data: response }
+      } catch (error: any) {
+        console.error('Erro ao deletar instância:', error)
+        
+        // Tratar diferentes tipos de erro
+        if (error.status === 401) {
+          this.setError('Token da instância inválido')
+        } else if (error.status === 404) {
+          this.setError('Instância não encontrada')
+        } else if (error.data?.error) {
+          this.setError(error.data.error)
+        } else {
+          this.setError('Erro ao deletar instância')
+        }
+        
+        return { success: false, error: this.error }
+      } finally {
+        this.setLoading(false)
+      }
+    },
+
+    // Ação para buscar webhooks de uma instância
+    async getWebhooks(serverUrl: string, instanceToken: string) {
+      this.setLoading(true)
+      this.setError(null)
+
+      try {
+        console.log('Buscando webhooks para instância:', instanceToken)
+        
+        const response = await $fetch<any[]>(`${serverUrl}/webhook`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'token': instanceToken
+          }
+        })
+
+        console.log('Webhooks encontrados:', response)
+        return { success: true, data: response }
+      } catch (error: any) {
+        console.error('Erro ao buscar webhooks:', error)
+        
+        if (error.status === 401) {
+          this.setError('Token da instância inválido')
+        } else if (error.status === 404) {
+          this.setError('Instância não encontrada')
+        } else if (error.data?.error) {
+          this.setError(error.data.error)
+        } else {
+          this.setError('Erro ao buscar webhooks')
+        }
+        
+        return { success: false, error: this.error }
+      } finally {
+        this.setLoading(false)
+      }
+    },
+
+    // Ação para criar webhook (modo simples - remove existente e cria novo)
+    async createWebhook(serverUrl: string, instanceToken: string, webhookData: any) {
+      this.setLoading(true)
+      this.setError(null)
+
+      try {
+        console.log('Criando webhook:', webhookData)
+        
+        const response = await $fetch(`${serverUrl}/webhook`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'token': instanceToken
+          },
+          body: webhookData
+        })
+
+        console.log('Webhook criado:', response)
+        return { success: true, data: response }
+      } catch (error: any) {
+        console.error('Erro ao criar webhook:', error)
+        
+        if (error.status === 400) {
+          this.setError('Dados do webhook inválidos')
+        } else if (error.status === 401) {
+          this.setError('Token da instância inválido')
+        } else if (error.status === 404) {
+          this.setError('Instância não encontrada')
+        } else if (error.data?.error) {
+          this.setError(error.data.error)
+        } else {
+          this.setError('Erro ao criar webhook')
+        }
+        
+        return { success: false, error: this.error }
+      } finally {
+        this.setLoading(false)
+      }
+    },
+
+    // Ação para deletar webhook
+    async deleteWebhook(serverUrl: string, instanceToken: string, webhookId: string) {
+      this.setLoading(true)
+      this.setError(null)
+
+      try {
+        console.log('Deletando webhook:', webhookId)
+        
+        const response = await $fetch(`${serverUrl}/webhook`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'token': instanceToken
+          },
+          body: {
+            id: webhookId,
+            action: 'delete'
+          }
+        })
+
+        console.log('Webhook deletado:', response)
+        return { success: true, data: response }
+      } catch (error: any) {
+        console.error('Erro ao deletar webhook:', error)
+        
+        if (error.status === 401) {
+          this.setError('Token da instância inválido')
+        } else if (error.status === 404) {
+          this.setError('Webhook não encontrado')
+        } else if (error.data?.error) {
+          this.setError(error.data.error)
+        } else {
+          this.setError('Erro ao deletar webhook')
+        }
+        
+        return { success: false, error: this.error }
+      } finally {
+        this.setLoading(false)
+      }
     }
   }
 })

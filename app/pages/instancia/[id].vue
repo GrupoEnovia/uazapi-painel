@@ -51,6 +51,10 @@ const tabs = [
 const toast = useToast()
 const router = useRouter()
 
+// Estados para operações
+const isDisconnecting = ref(false)
+const showQRModal = ref(false)
+
 // Computed para obter a instância atual
 const instance = computed(() => instanciaAtualStore.instancia)
 
@@ -134,6 +138,78 @@ const loadInstance = async () => {
   }
 }
 
+// Função para desconectar instância
+const handleDisconnect = async () => {
+  if (!instance.value || !instanciaAtualStore.serverUrl) {
+    toast.add({
+      title: 'Erro',
+      description: 'Informações do servidor não disponíveis',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  isDisconnecting.value = true
+
+  try {
+    const result = await instancesStore.disconnectInstance(
+      instanciaAtualStore.serverUrl,
+      instance.value.token
+    )
+
+    if (result.success) {
+      toast.add({
+        title: 'Instância desconectada',
+        description: `A instância ${instance.value.name} foi desconectada com sucesso`,
+        icon: 'i-lucide-check-circle',
+        color: 'success'
+      })
+
+      // Atualizar o status da instância nos stores
+      const updatedInstance = {
+        ...instance.value,
+        status: 'disconnected'
+      }
+      
+      instancesStore.updateInstance(updatedInstance)
+      instanciaAtualStore.setInstancia(updatedInstance)
+
+    } else {
+      toast.add({
+        title: 'Erro ao desconectar',
+        description: result.error || 'Ocorreu um erro ao desconectar a instância',
+        icon: 'i-lucide-alert-circle',
+        color: 'error'
+      })
+    }
+  } catch (error) {
+    toast.add({
+      title: 'Erro inesperado',
+      description: 'Ocorreu um erro inesperado ao desconectar a instância',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+  } finally {
+    isDisconnecting.value = false
+  }
+}
+
+// Função para conectar instância (abrir modal QR)
+const handleConnect = () => {
+  if (!instance.value || !instanciaAtualStore.serverUrl) {
+    toast.add({
+      title: 'Erro',
+      description: 'Informações do servidor não disponíveis',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
+    })
+    return
+  }
+
+  showQRModal.value = true
+}
+
 // Carregar dados ao montar o componente
 onMounted(() => {
   loadInstance()
@@ -184,13 +260,40 @@ useHead({
             {{ instance.owner }}
           </p>
         </div>
-        <UBadge 
-          :color="getStatusColor(instance.status)"
-          variant="subtle"
-          class="capitalize"
-        >
-          {{ getStatusLabel(instance.status) }}
-        </UBadge>
+        <div class="flex items-center gap-2">
+          <UBadge 
+            :color="getStatusColor(instance.status)"
+            variant="subtle"
+            class="capitalize"
+          >
+            {{ getStatusLabel(instance.status) }}
+          </UBadge>
+          
+          <!-- Botão de desconectar (só aparece se conectado) -->
+          <UButton
+            v-if="instance.status.toLowerCase() === 'connected'"
+            color="error"
+            variant="outline"
+            size="xs"
+            icon="i-lucide-power-off"
+            :loading="isDisconnecting"
+            @click="handleDisconnect"
+          >
+            {{ isDisconnecting ? 'Desconectando...' : 'Desconectar' }}
+          </UButton>
+
+          <!-- Botão de conectar (só aparece se desconectado) -->
+          <UButton
+            v-else-if="instance.status.toLowerCase() === 'disconnected'"
+            color="success"
+            variant="outline"
+            size="xs"
+            icon="i-lucide-power"
+            @click="handleConnect"
+          >
+            Conectar
+          </UButton>
+        </div>
       </div>
       </div>
 
@@ -255,42 +358,39 @@ useHead({
         />
 
         <!-- Aba Webhook -->
-        <div v-else-if="activeTab === 'webhook'" class="space-y-6">
-          <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              Gerenciamento de Webhooks
-            </h3>
-            <div class="text-center py-12">
-              <UIcon name="i-lucide-webhook" class="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Em desenvolvimento
-              </h4>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                A funcionalidade de webhooks será implementada em breve.
-              </p>
-            </div>
-          </div>
-        </div>
+        <WebhookAba 
+          v-else-if="activeTab === 'webhook'" 
+          :instance="instance"
+          :server-url="instanciaAtualStore.serverUrl"
+          :admin-token="instanciaAtualStore.adminToken"
+        />
 
         <!-- Aba Eventos -->
-        <div v-else-if="activeTab === 'eventos'" class="space-y-6">
-          <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              Log de Eventos
-            </h3>
-            <div class="text-center py-12">
-              <UIcon name="i-lucide-activity" class="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Em desenvolvimento
-              </h4>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                O log de eventos será implementado em breve.
-              </p>
-            </div>
-          </div>
-        </div>
+        <EventosAba 
+          v-else-if="activeTab === 'eventos'" 
+          :instance="instance"
+          :server-url="instanciaAtualStore.serverUrl"
+          :admin-token="instanciaAtualStore.adminToken"
+        />
       </div>
       </div>
     </div>
+
+    <!-- Modal de QR Code para conectar -->
+    <QRCodeModal
+      v-if="instance && instanciaAtualStore.serverUrl && instanciaAtualStore.adminToken"
+      v-model:open="showQRModal"
+      :instance="instance"
+      :server-url="instanciaAtualStore.serverUrl"
+      :admin-token="instanciaAtualStore.adminToken"
+      @connection-success="() => {
+        // Atualizar status da instância quando conectar com sucesso
+        if (instance) {
+          const updatedInstance = { ...instance, status: 'connected' }
+          instancesStore.updateInstance(updatedInstance)
+          instanciaAtualStore.setInstancia(updatedInstance)
+        }
+      }"
+    />
   </NuxtLayout>
 </template>

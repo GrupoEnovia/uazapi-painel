@@ -101,12 +101,37 @@ const dropdownItems = computed(() => {
 // Estado do modal de criar instância
 const isCreateInstanceModalOpen = ref(false)
 
+// Estado do modal de webhook global
+const isGlobalWebhookModalOpen = ref(false)
+
 // Handler para criar nova instância
 const handleCreateInstance = () => {
   if (server.value?.adminToken && server.value?.serverUrl) {
     isCreateInstanceModalOpen.value = true
   } else {
     console.warn('Servidor não possui adminToken ou serverUrl configurados')
+  }
+}
+
+// Handler para abrir modal de webhook global
+const handleOpenGlobalWebhook = () => {
+  console.log('🎭 handleOpenGlobalWebhook chamado:', {
+    serverExists: !!server.value,
+    serverUrl: server.value?.serverUrl,
+    hasAdminToken: !!server.value?.adminToken,
+    modalCurrentlyOpen: isGlobalWebhookModalOpen.value
+  })
+  
+  if (server.value?.adminToken && server.value?.serverUrl) {
+    console.log('🎭 Abrindo modal de webhook global...')
+    isGlobalWebhookModalOpen.value = true
+    console.log('🎭 Modal state após abertura:', isGlobalWebhookModalOpen.value)
+  } else {
+    console.warn('❌ Servidor não possui adminToken ou serverUrl configurados', {
+      server: server.value,
+      adminToken: server.value?.adminToken ? '[EXISTE]' : '[NÃO EXISTE]',
+      serverUrl: server.value?.serverUrl
+    })
   }
 }
 
@@ -255,6 +280,7 @@ const handleCreateInstanceSubmit = async (instanceData: CreateInstanceRequest) =
           :admin-token="server?.adminToken"
           @create-instance="handleCreateInstance"
           @refresh-instances="handleRefreshInstances"
+          @open-global-webhook="handleOpenGlobalWebhook"
         />
       </div>
     </div>
@@ -266,6 +292,14 @@ const handleCreateInstanceSubmit = async (instanceData: CreateInstanceRequest) =
       :admin-token="server.adminToken"
       :server-url="server.serverUrl"
       @submit="handleCreateInstanceSubmit"
+    />
+
+    <!-- Modal para webhook global -->
+    <GlobalWebhookModal
+      v-if="server && server.adminToken && server.serverUrl"
+      v-model:open="isGlobalWebhookModalOpen"
+      :server-url="server.serverUrl"
+      :admin-token="server.adminToken"
     />
   </NuxtLayout>
 </template>
