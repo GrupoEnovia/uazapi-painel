@@ -16,12 +16,6 @@
         
         <!-- Navegação no desktop -->
         <nav class="hidden md:flex items-center space-x-6">
-          <NuxtLink 
-            to="/" 
-            class="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-          >
-            Início
-          </NuxtLink>
           <a 
             href="https://docs.uazapi.com/"
             target="_blank"

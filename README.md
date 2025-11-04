@@ -1,31 +1,34 @@
-# Nuxt Starter Template
+# UAZAPI Painel
 
 [![Nuxt UI](https://img.shields.io/badge/Made%20with-Nuxt%20UI-00DC82?logo=nuxt&labelColor=020420)](https://ui.nuxt.com)
+[![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?logo=vue.js&logoColor=white)](https://vuejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-Use this template to get started with [Nuxt UI](https://ui.nuxt.com) quickly.
+## 🎯 Objetivo
 
-- [Live demo](https://starter-template.nuxt.dev/)
-- [Documentation](https://ui.nuxt.com/docs/getting-started/installation/nuxt)
+Painel web para gerenciamento de instâncias do UAZAPI, permitindo:
 
-<a href="https://starter-template.nuxt.dev/" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png">
-    <img alt="Nuxt Starter Template" src="https://ui.nuxt.com/assets/templates/nuxt/starter-light.png">
-  </picture>
-</a>
+- ✅ Gerenciamento de servidores UAZAPI
+- ✅ Criação e monitoramento de instâncias WhatsApp
+- ✅ Configuração de webhooks globais e por instância
+- ✅ Monitoramento em tempo real via Server-Sent Events (SSE)
+- ✅ Interface moderna e responsiva
+- ✅ Funcionamento 100% no cliente (sem servidor próprio)
 
-> The starter template for Vue is on https://github.com/nuxt-ui-templates/starter-vue.
+## 🚀 Tecnologias Utilizadas
 
-## Quick Start
+- **[Nuxt 3](https://nuxt.com/)** - Framework Vue.js para aplicações web
+- **[Vue.js 3](https://vuejs.org/)** - Framework JavaScript reativo
+- **[TypeScript](https://www.typescriptlang.org/)** - Superset tipado do JavaScript
+- **[Nuxt UI](https://ui.nuxt.com/)** - Biblioteca de componentes para Nuxt
+- **[Tailwind CSS](https://tailwindcss.com/)** - Framework CSS utilitário
+- **[Pinia](https://pinia.vuejs.org/)** - Gerenciamento de estado para Vue.js
+- **[Lucide Icons](https://lucide.dev/)** - Ícones modernos e limpos
 
-```bash [Terminal]
-npm create nuxt@latest -- -t github:nuxt-ui-templates/starter
-```
+## 🤖 Desenvolvido 100% com IA
 
-## Deploy your own
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-name=starter&repository-url=https%3A%2F%2Fgithub.com%2Fnuxt-ui-templates%2Fstarter&demo-image=https%3A%2F%2Fui.nuxt.com%2Fassets%2Ftemplates%2Fnuxt%2Fstarter-dark.png&demo-url=https%3A%2F%2Fstarter-template.nuxt.dev%2F&demo-title=Nuxt%20Starter%20Template&demo-description=A%20minimal%20template%20to%20get%20started%20with%20Nuxt%20UI.)
+Este painel foi criado inteiramente utilizando Inteligência Artificial, demonstrando o poder das ferramentas de IA no desenvolvimento moderno.
 
 ## Setup
 
@@ -58,3 +61,21 @@ pnpm preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+## 👨‍💻 Desenvolvedor
+
+**Israel Henrique - Data7 Apps**
+
+### 📚 Aprenda a Criar SaaS com IA
+
+Quer aprender a criar sistemas como este usando IA? Confira meu curso completo:
+
+🎓 **[Acelerador SaaS](https://www.aceleradorsaas.com.br/)**
+
+Aprenda a desenvolver aplicações SaaS modernas utilizando as mais avançadas ferramentas de Inteligência Artificial.
+
+---
+
+## 📄 Licença
+
+Este projeto é open source e está disponível sob a [Licença MIT](LICENSE).
