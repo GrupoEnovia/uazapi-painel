@@ -16,11 +16,6 @@ const isDeleteModalOpen = ref(false)
 const serverToDelete = ref<string | null>(null)
 
 // Handlers dos eventos
-const handleEditServer = (server: Server) => {
-  console.log('Editar servidor:', server)
-  // Implementar lógica de edição
-}
-
 const handleDeleteServer = (serverId: string) => {
   serverToDelete.value = serverId
   isDeleteModalOpen.value = true
@@ -63,18 +58,6 @@ const handleModalSubmit = (serverData: CreateServerRequest) => {
         </div>
         
         <div class="flex gap-3">
-          <!-- Botão temporário para testar a nova página -->
-          <NuxtLink to="/instancia/teste123">
-            <UButton 
-              color="secondary" 
-              size="lg" 
-              icon="i-lucide-smartphone"
-              variant="outline"
-            >
-              Ver Instância (Teste)
-            </UButton>
-          </NuxtLink>
-          
           <!-- Botão para adicionar servidor -->
           <UButton 
             color="primary" 
@@ -92,7 +75,6 @@ const handleModalSubmit = (serverData: CreateServerRequest) => {
       <ServerList
         :servers="servers"
         :loading="loading"
-        @edit-server="handleEditServer"
         @delete-server="handleDeleteServer"
         @view-details="handleViewDetails"
       />

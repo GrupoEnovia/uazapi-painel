@@ -12,14 +12,9 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  editServer: [server: Server]
   deleteServer: [serverId: string]
   viewDetails: [server: Server]
 }>()
-
-const handleEdit = (server: Server) => {
-  emit('editServer', server)
-}
 
 const handleDelete = (serverId: string) => {
   emit('deleteServer', serverId)
@@ -30,6 +25,10 @@ const handleDetails = (server: Server) => {
 }
 
 const handleCardClick = (server: Server) => {
+  // Resetar o store de instâncias antes de navegar
+  const instancesStore = useInstancesStore()
+  instancesStore.clearInstances()
+  
   // Navegar para a página do servidor
   navigateTo(`/servidor/${server.id}`)
 }
@@ -107,8 +106,8 @@ const toggleTokenVisibility = (serverId: string) => {
             <p class="text-sm text-gray-600 dark:text-gray-400">
               <span class="font-medium">Admin Token:</span>
             </p>
-            <div class="flex items-center gap-2">
-              <p class="text-sm text-gray-500 dark:text-gray-400 font-mono flex-1">
+            <div class="flex items-start gap-2">
+              <p class="text-sm text-gray-500 dark:text-gray-400 font-mono flex-1 min-w-0 break-all">
                 {{ visibleTokens[server.id] ? server.adminToken : '••••••••••••••••' }}
               </p>
               <UButton
@@ -117,7 +116,7 @@ const toggleTokenVisibility = (serverId: string) => {
                 variant="link"
                 size="xs"
                 :icon="visibleTokens[server.id] ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                class="cursor-pointer"
+                class="cursor-pointer flex-shrink-0"
                 @click.stop="toggleTokenVisibility(server.id)"
               />
             </div>
@@ -126,16 +125,6 @@ const toggleTokenVisibility = (serverId: string) => {
 
         <template #footer>
           <div class="flex gap-2 justify-end">
-            <UButton 
-              size="sm" 
-              color="neutral" 
-              variant="ghost"
-              icon="i-lucide-edit"
-              class="cursor-pointer"
-              @click.stop="handleEdit(server)"
-            >
-              Editar
-            </UButton>
             <UButton 
               size="sm" 
               color="error" 

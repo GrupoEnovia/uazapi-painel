@@ -64,39 +64,31 @@ const copyToClipboard = async (text: string) => {
   }
 }
 
-const copyToken = () => {
+const copyToken = async () => {
   if (server.value?.adminToken) {
-    copyToClipboard(server.value.adminToken)
+    await copyToClipboard(server.value.adminToken)
+    toast.add({
+      title: 'Token copiado!',
+      description: 'Admin token foi copiado para a área de transferência',
+      icon: 'i-lucide-copy',
+      color: 'success'
+    })
   }
 }
 
-const copyServerUrl = () => {
+const copyServerUrl = async () => {
   if (server.value?.serverUrl) {
-    copyToClipboard(server.value.serverUrl)
+    await copyToClipboard(server.value.serverUrl)
+    toast.add({
+      title: 'URL copiada!',
+      description: 'Server URL foi copiada para a área de transferência',
+      icon: 'i-lucide-copy',
+      color: 'success'
+    })
   }
 }
 
-// Itens do dropdown com todos os servidores
-const dropdownItems = computed(() => {
-  if (servers.value.length <= 1) {
-    return [[
-      {
-        label: 'Nenhum outro servidor',
-        icon: 'i-lucide-info',
-        disabled: true
-      }
-    ]]
-  }
 
-  return [
-    servers.value.map(s => ({
-      label: s.nome,
-      icon: s.id === serverId ? 'i-lucide-check' : 'i-lucide-server',
-      to: s.id === serverId ? undefined : `/servidor/${s.id}`,
-      disabled: s.id === serverId
-    }))
-  ]
-})
 
 // Estado do modal de criar instância
 const isCreateInstanceModalOpen = ref(false)
@@ -218,21 +210,29 @@ const handleCreateInstanceSubmit = async (instanceData: CreateInstanceRequest) =
 
         <!-- Informações do servidor -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <!-- Server URL - Dropdown style -->
+          <!-- Server URL - Input readonly -->
           <div>
             <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
               Server URL
             </label>
-            <UDropdownMenu :items="dropdownItems" :ui="{ content: 'w-(--reka-dropdown-menu-trigger-width)' }">
-              <UButton
-                class="w-full justify-start h-10"
-                color="neutral"
-                variant="outline"
-                :label="server.serverUrl"
-                trailing-icon="i-lucide-chevron-down"
-                truncate
+            <div class="relative w-full">
+              <UInput
+                :model-value="server.serverUrl"
+                readonly
+                class="w-full pr-12"
               />
-            </UDropdownMenu>
+              <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                <UButton
+                  color="neutral"
+                  variant="link"
+                  size="xs"
+                  :icon="copied ? 'i-lucide-copy-check' : 'i-lucide-copy'"
+                  :class="copied ? 'text-success' : ''"
+                  class="cursor-pointer"
+                  @click="copyServerUrl"
+                />
+              </div>
+            </div>
           </div>
 
           <!-- Admin Token - Input style readonly -->
