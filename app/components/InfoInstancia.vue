@@ -19,11 +19,44 @@ const instanciaAtualStore = useInstanciaAtualStore()
 // Composables
 const toast = useToast()
 const router = useRouter()
+const { generateConnectUrl } = useCrypto()
 
 // Estados dos campos administrativos
 const adminField01 = ref(props.instance.adminField01 || '')
 const adminField02 = ref(props.instance.adminField02 || '')
 const isSaving = ref(false)
+
+// Estados para URL do cliente
+const clientUrl = ref<string | null>(null)
+const isGeneratingUrl = ref(false)
+
+// Gerar URL automaticamente ao montar o componente
+onMounted(async () => {
+  if (props.serverUrl) {
+    isGeneratingUrl.value = true
+    try {
+      clientUrl.value = await generateConnectUrl(props.instance.token, props.serverUrl)
+    } catch (error) {
+      console.error('Erro ao gerar URL do cliente:', error)
+    } finally {
+      isGeneratingUrl.value = false
+    }
+  }
+})
+
+// Também regenerar se o serverUrl ou token mudar
+watch(() => [props.serverUrl, props.instance.token], async () => {
+  if (props.serverUrl) {
+    isGeneratingUrl.value = true
+    try {
+      clientUrl.value = await generateConnectUrl(props.instance.token, props.serverUrl)
+    } catch (error) {
+      console.error('Erro ao gerar URL do cliente:', error)
+    } finally {
+      isGeneratingUrl.value = false
+    }
+  }
+})
 
 // Estados para deletar instância
 const showDeleteConfirmation = ref(false)
@@ -86,6 +119,28 @@ async function copyToken() {
       description: 'Não foi possível copiar o token para a área de transferência',
       icon: 'i-lucide-alert-circle',
       color: 'error'  
+    })
+  }
+}
+
+// Função para copiar URL do cliente
+async function copyClientUrl() {
+  if (!clientUrl.value) return
+
+  try {
+    await navigator.clipboard.writeText(clientUrl.value)
+    toast.add({
+      title: 'URL copiada!',
+      description: 'URL de acesso copiada para a área de transferência',
+      icon: 'i-lucide-check-circle',
+      color: 'success'
+    })
+  } catch (error) {
+    toast.add({
+      title: 'Erro ao copiar',
+      description: 'Não foi possível copiar a URL para a área de transferência',
+      icon: 'i-lucide-alert-circle',
+      color: 'error'
     })
   }
 }
@@ -229,6 +284,67 @@ const handleDeleteInstance = async () => {
 
 <template>
   <div class="space-y-6">
+    <!-- URL do Cliente -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div class="mb-4">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+          URL de Acesso do Cliente
+        </h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Envie esta URL para o cliente gerar o QR Code sem precisar de login e senha
+        </p>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="isGeneratingUrl" class="text-center py-8">
+        <UIcon name="i-lucide-loader-circle" class="w-8 h-8 mx-auto mb-3 animate-spin text-primary-500" />
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Gerando URL criptografada...
+        </p>
+      </div>
+
+      <!-- URL Gerada -->
+      <div v-else-if="clientUrl" class="space-y-4">
+        <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+          <code class="flex-1 text-xs font-mono text-gray-900 dark:text-white break-all">
+            {{ clientUrl }}
+          </code>
+          <UButton
+            color="primary"
+            variant="outline"
+            size="xs"
+            icon="i-lucide-copy"
+            @click="copyClientUrl"
+          >
+            Copiar
+          </UButton>
+        </div>
+
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <UIcon name="i-lucide-shield-check" class="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <div class="flex-1">
+              <h4 class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                Acesso Seguro sem Login
+              </h4>
+              <p class="text-xs text-blue-700 dark:text-blue-300">
+                Esta URL criptografada permite que o cliente gere o QR Code para conectar o WhatsApp <strong>sem precisar de login e senha</strong>. 
+                Os dados são protegidos com AES-GCM, garantindo segurança total na transmissão.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div v-else class="text-center py-8">
+        <UIcon name="i-lucide-alert-circle" class="w-8 h-8 mx-auto mb-3 text-gray-400" />
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Não foi possível gerar a URL de acesso
+        </p>
+      </div>
+    </div>
+    
     <!-- Informações Básicas -->
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
