@@ -37,7 +37,7 @@ export const useInstancesStore = defineStore('instances', {
       const connected = state.instances.filter(i => i.status.toLowerCase() === 'connected').length
       const total = state.instances.length
       const disconnected = total - connected
-      
+
       return { connected, disconnected, total }
     },
 
@@ -47,10 +47,10 @@ export const useInstancesStore = defineStore('instances', {
         if (!searchQuery.trim()) {
           return [...state.instances]
         }
-        
+
         const query = searchQuery.toLowerCase().trim()
-        
-        return state.instances.filter(instance => 
+
+        return state.instances.filter(instance =>
           instance.name.toLowerCase().includes(query) ||
           (instance.profileName || '').toLowerCase().includes(query) ||
           instance.token.toLowerCase().includes(query)
@@ -134,7 +134,7 @@ export const useInstancesStore = defineStore('instances', {
 
       try {
         console.log('Buscando instâncias para:', { serverUrl, adminToken })
-        
+
         // Chamada real para a API usando $fetch
         const response = await $fetch<Instance[]>(`${serverUrl}/instance/all`, {
           headers: {
@@ -144,10 +144,10 @@ export const useInstancesStore = defineStore('instances', {
 
         console.log('Instâncias carregadas da API:', response)
         this.setInstances(response)
-        
+
       } catch (error: any) {
         console.error('Erro ao buscar instâncias:', error)
-        
+
         // Tratar diferentes tipos de erro como no composable original
         if (error.status === 401) {
           this.setError('Token de administrador inválido')
@@ -158,7 +158,7 @@ export const useInstancesStore = defineStore('instances', {
         } else {
           this.setError('Erro ao conectar com o servidor')
         }
-        
+
         // Limpar instâncias em caso de erro
         this.instances = []
       } finally {
@@ -173,7 +173,7 @@ export const useInstancesStore = defineStore('instances', {
 
       try {
         console.log('Criando nova instância:', instanceData)
-        
+
         const response = await $fetch(`${serverUrl}/instance/init`, {
           method: 'POST',
           headers: {
@@ -184,14 +184,14 @@ export const useInstancesStore = defineStore('instances', {
         })
 
         console.log('Instância criada:', response)
-        
+
         // Após criar com sucesso, recarregar a lista de instâncias
         await this.fetchInstances(serverUrl, adminToken)
-        
+
         return { success: true, data: response }
       } catch (error: any) {
         console.error('Erro ao criar instância:', error)
-        
+
         // Tratar diferentes tipos de erro
         if (error.status === 401) {
           this.setError('Token de administrador inválido ou expirado')
@@ -204,7 +204,7 @@ export const useInstancesStore = defineStore('instances', {
         } else {
           this.setError('Erro ao criar instância')
         }
-        
+
         return { success: false, error: this.error }
       } finally {
         this.setLoading(false)
@@ -213,10 +213,10 @@ export const useInstancesStore = defineStore('instances', {
 
     // Ação para atualizar campos administrativos de uma instância
     async updateAdminFields(
-      serverUrl: string, 
+      serverUrl: string,
       adminToken: string,
-      instanceId: string, 
-      adminField01: string, 
+      instanceId: string,
+      adminField01: string,
       adminField02: string
     ) {
       this.setLoading(true)
@@ -224,7 +224,7 @@ export const useInstancesStore = defineStore('instances', {
 
       try {
         console.log('Atualizando campos administrativos:', { instanceId, adminField01, adminField02 })
-        
+
         const response = await $fetch(`${serverUrl}/instance/updateAdminFields`, {
           method: 'POST',
           headers: {
@@ -239,11 +239,11 @@ export const useInstancesStore = defineStore('instances', {
         })
 
         console.log('Campos administrativos atualizados:', response)
-        
+
         return { success: true, data: response }
       } catch (error: any) {
         console.error('Erro ao atualizar campos administrativos:', error)
-        
+
         // Tratar diferentes tipos de erro
         if (error.status === 400) {
           this.setError('Dados inválidos fornecidos')
@@ -258,7 +258,7 @@ export const useInstancesStore = defineStore('instances', {
         } else {
           this.setError('Erro ao atualizar campos administrativos')
         }
-        
+
         return { success: false, error: this.error }
       } finally {
         this.setLoading(false)
@@ -272,7 +272,7 @@ export const useInstancesStore = defineStore('instances', {
 
       try {
         console.log('Desconectando instância:', instanceToken)
-        
+
         const response = await $fetch(`${serverUrl}/instance/disconnect`, {
           method: 'POST',
           headers: {
@@ -282,11 +282,11 @@ export const useInstancesStore = defineStore('instances', {
         })
 
         console.log('Instância desconectada:', response)
-        
+
         return { success: true, data: response }
       } catch (error: any) {
         console.error('Erro ao desconectar instância:', error)
-        
+
         // Tratar diferentes tipos de erro
         if (error.status === 401) {
           this.setError('Token da instância inválido')
@@ -297,7 +297,7 @@ export const useInstancesStore = defineStore('instances', {
         } else {
           this.setError('Erro ao desconectar instância')
         }
-        
+
         return { success: false, error: this.error }
       } finally {
         this.setLoading(false)
@@ -311,7 +311,7 @@ export const useInstancesStore = defineStore('instances', {
 
       try {
         console.log('Gerando QR code para instância:', instanceToken)
-        
+
         // Verificar o status da conexão primeiro
         const statusResponse = await $fetch<any>(`${serverUrl}/instance/status`, {
           method: 'GET',
@@ -322,9 +322,9 @@ export const useInstancesStore = defineStore('instances', {
         })
 
         // Se já está conectando e tem QR code, retornar o existente
-        if (statusResponse.instance && 
-            statusResponse.instance.status === "connecting" && 
-            statusResponse.instance.qrcode) {
+        if (statusResponse.instance &&
+          statusResponse.instance.status === "connecting" &&
+          statusResponse.instance.qrcode) {
           return { success: true, qrcode: statusResponse.instance.qrcode }
         }
 
@@ -345,7 +345,7 @@ export const useInstancesStore = defineStore('instances', {
         }
       } catch (error: any) {
         console.error('Erro ao gerar QR code:', error)
-        
+
         // Tratar diferentes tipos de erro
         if (error.status === 401) {
           this.setError('Token da instância inválido')
@@ -356,7 +356,7 @@ export const useInstancesStore = defineStore('instances', {
         } else {
           this.setError('Erro ao gerar QR code')
         }
-        
+
         return { success: false, error: this.error }
       } finally {
         this.setLoading(false)
@@ -370,7 +370,7 @@ export const useInstancesStore = defineStore('instances', {
 
       try {
         console.log('Deletando instância:', instanceId)
-        
+
         const response = await $fetch(`${serverUrl}/instance`, {
           method: 'DELETE',
           headers: {
@@ -380,14 +380,14 @@ export const useInstancesStore = defineStore('instances', {
         })
 
         console.log('Instância deletada:', response)
-        
+
         // Remover a instância do store após sucesso
         this.removeInstance(instanceId)
-        
+
         return { success: true, data: response }
       } catch (error: any) {
         console.error('Erro ao deletar instância:', error)
-        
+
         // Tratar diferentes tipos de erro
         if (error.status === 401) {
           this.setError('Token da instância inválido')
@@ -398,7 +398,7 @@ export const useInstancesStore = defineStore('instances', {
         } else {
           this.setError('Erro ao deletar instância')
         }
-        
+
         return { success: false, error: this.error }
       } finally {
         this.setLoading(false)
@@ -412,7 +412,7 @@ export const useInstancesStore = defineStore('instances', {
 
       try {
         console.log('Buscando webhooks para instância:', instanceToken)
-        
+
         const response = await $fetch<any[]>(`${serverUrl}/webhook`, {
           method: 'GET',
           headers: {
@@ -425,7 +425,7 @@ export const useInstancesStore = defineStore('instances', {
         return { success: true, data: response }
       } catch (error: any) {
         console.error('Erro ao buscar webhooks:', error)
-        
+
         if (error.status === 401) {
           this.setError('Token da instância inválido')
         } else if (error.status === 404) {
@@ -435,7 +435,7 @@ export const useInstancesStore = defineStore('instances', {
         } else {
           this.setError('Erro ao buscar webhooks')
         }
-        
+
         return { success: false, error: this.error }
       } finally {
         this.setLoading(false)
@@ -449,7 +449,7 @@ export const useInstancesStore = defineStore('instances', {
 
       try {
         console.log('Criando webhook:', webhookData)
-        
+
         const response = await $fetch(`${serverUrl}/webhook`, {
           method: 'POST',
           headers: {
@@ -464,7 +464,7 @@ export const useInstancesStore = defineStore('instances', {
         return { success: true, data: response }
       } catch (error: any) {
         console.error('Erro ao criar webhook:', error)
-        
+
         if (error.status === 400) {
           this.setError('Dados do webhook inválidos')
         } else if (error.status === 401) {
@@ -476,7 +476,7 @@ export const useInstancesStore = defineStore('instances', {
         } else {
           this.setError('Erro ao criar webhook')
         }
-        
+
         return { success: false, error: this.error }
       } finally {
         this.setLoading(false)
@@ -490,7 +490,7 @@ export const useInstancesStore = defineStore('instances', {
 
       try {
         console.log('Deletando webhook:', webhookId)
-        
+
         const response = await $fetch(`${serverUrl}/webhook`, {
           method: 'POST',
           headers: {
@@ -508,7 +508,7 @@ export const useInstancesStore = defineStore('instances', {
         return { success: true, data: response }
       } catch (error: any) {
         console.error('Erro ao deletar webhook:', error)
-        
+
         if (error.status === 401) {
           this.setError('Token da instância inválido')
         } else if (error.status === 404) {
@@ -518,7 +518,81 @@ export const useInstancesStore = defineStore('instances', {
         } else {
           this.setError('Erro ao deletar webhook')
         }
-        
+
+        return { success: false, error: this.error }
+      } finally {
+        this.setLoading(false)
+      }
+    },
+
+    // Ação para reconectar instância
+    async reconnectInstance(serverUrl: string, instanceToken: string, phone: string) {
+      // Removido setLoading(true) para não bloquear a UI globalmente
+      this.setError(null)
+
+      try {
+        console.log('Reconectando instância:', { instanceToken, phone })
+
+        const response = await $fetch(`${serverUrl}/instance/connect`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'token': instanceToken
+          },
+          body: {
+            phone: phone
+          }
+        })
+
+        console.log('Instância reconectada:', response)
+
+        return { success: true, data: response }
+      } catch (error: any) {
+        console.error('Erro ao reconectar instância:', error)
+
+        if (error.status === 401) {
+          // Não setar erro global também, retornar erro local
+          return { success: false, error: 'Token da instância inválido' }
+        } else if (error.status === 404) {
+          return { success: false, error: 'Instância não encontrada' }
+        } else if (error.data?.error) {
+          return { success: false, error: error.data.error }
+        } else {
+          return { success: false, error: 'Erro ao reconectar instância' }
+        }
+      }
+      // Finally removido pois não há mais loading global para desligar
+    },
+
+    // Ação para reiniciar o servidor
+    async restartServer(serverUrl: string, adminToken: string) {
+      this.setLoading(true)
+      this.setError(null)
+
+      try {
+        console.log('Reiniciando servidor:', serverUrl)
+
+        const response = await $fetch(`${serverUrl}/admin/restart`, {
+          method: 'POST',
+          headers: {
+            'admintoken': adminToken
+          }
+        })
+
+        console.log('Servidor reiniciado:', response)
+        return { success: true, data: response }
+      } catch (error: any) {
+        console.error('Erro ao reiniciar servidor:', error)
+
+        if (error.status === 401) {
+          this.setError('Token de administrador inválido')
+        } else if (error.data?.error) {
+          this.setError(error.data.error)
+        } else {
+          this.setError('Erro ao reiniciar servidor')
+        }
+
         return { success: false, error: this.error }
       } finally {
         this.setLoading(false)

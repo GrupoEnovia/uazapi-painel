@@ -10,6 +10,10 @@ const UBadge = resolveComponent('UBadge')
 const UButton = resolveComponent('UButton')
 
 // Composable do Toast
+const reconnectingInstances = ref(new Set<string>())
+
+// ... existing code ...
+
 const toast = useToast()
 
 interface Props {
@@ -274,10 +278,63 @@ function getStatusLabel(status: string) {
   }
 }
 
-// Handler para quando uma instância for atualizada
+// Handler para refresh das instâncias
 const handleInstanceUpdated = () => {
   // Emitir evento para o componente pai recarregar as instâncias
   emit('refreshInstances')
+}
+
+// Handler para reiniciar servidor
+const handleRestartServer = async () => {
+  if (!props.serverUrl || !props.adminToken) {
+    toast.add({
+      title: 'Erro de configuração',
+      description: 'URL do servidor ou token não configurados',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
+  
+  
+  const loadingToast = toast.add({
+    title: 'Reiniciando servidor...',
+    description: 'Aguarde enquanto o serviço é reiniciado',
+    color: 'warning',
+    icon: 'i-lucide-loader-2'
+  })
+  
+  try {
+    const result = await instancesStore.restartServer(props.serverUrl, props.adminToken)
+    
+    toast.remove(loadingToast.id)
+    
+    if (result.success) {
+      toast.add({
+        title: 'Servidor reiniciado',
+        description: 'O servidor foi reiniciado com sucesso',
+        color: 'success',
+        icon: 'i-lucide-check-circle'
+      })
+      // Dar um tempo para o servidor subir e atualizar a lista
+      setTimeout(() => emit('refreshInstances'), 5000)
+    } else {
+      toast.add({
+        title: 'Erro ao reiniciar',
+        description: result.error || 'Falha ao reiniciar servidor',
+        color: 'error',
+        icon: 'i-lucide-alert-circle'
+      })
+    }
+  } catch (err) {
+    toast.remove(loadingToast.id)
+    toast.add({
+      title: 'Erro inesperado',
+      description: 'Ocorreu um erro ao tentar reiniciar o servidor',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+  }
 }
 </script>
 
@@ -321,6 +378,16 @@ const handleInstanceUpdated = () => {
       <div v-else></div>
       
       <div class="flex items-center gap-2">
+        <UButton 
+          color="warning" 
+          size="lg" 
+          icon="i-lucide-power"
+          variant="outline"
+          class="cursor-pointer hover:cursor-pointer"
+          @click="handleRestartServer"
+        >
+          Reiniciar Servidor
+        </UButton>
         <UButton 
           color="secondary" 
           size="lg" 
