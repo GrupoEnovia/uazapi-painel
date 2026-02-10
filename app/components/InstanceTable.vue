@@ -33,14 +33,17 @@ const emit = defineEmits<{
   openGlobalWebhook: []
 }>()
 
-// Estado para o filtro de pesquisa
-const searchQuery = ref('')
-
-// Removed modal state variables - now using navigation
-
 // Stores Pinia
 const instancesStore = useInstancesStore()
 const instanciaAtualStore = useInstanciaAtualStore()
+
+interface Props {
+  instances: readonly Instance[]
+  loading: boolean
+  error: string | null
+  serverUrl?: string
+  adminToken?: string
+}
 
 // Função para navegar para página da instância
 function openInstancePage(row: TableRow<Instance>) {
@@ -58,18 +61,36 @@ function openInstancePage(row: TableRow<Instance>) {
   navigateTo(`/instancia/${instance.id}`)
 }
 
-
-
-// Computed para filtrar instâncias por nome, perfil ou token
-const filteredInstances = computed(() => {
-  return instancesStore.filteredInstances(searchQuery.value)
+// Estado para o filtro de pesquisa (lendo e escrevendo na store)
+const searchQuery = computed({
+  get: () => instancesStore.searchQuery,
+  set: (val) => instancesStore.setSearchQuery(val)
 })
 
-// Estado para controlar a ordenação
-const sorting = ref([{
-  id: 'status',
-  desc: false
-}])
+// Estado para o filtro de status (lendo e escrevendo na store)
+const statusFilter = computed({
+  get: () => instancesStore.statusFilter,
+  set: (val) => instancesStore.setStatusFilter(val)
+})
+
+// Opções do filtro de status
+const statusOptions = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Conectado', value: 'connected' },
+  { label: 'Desconectado', value: 'disconnected' },
+  { label: 'Conectando', value: 'connecting' }
+]
+
+// Computed para filtrar instâncias usando o getter da store (que já usa os estados da store)
+const filteredInstances = computed(() => {
+  return instancesStore.filteredInstances
+})
+
+// Estado para controlar a ordenação (lendo e escrevendo na store)
+const sorting = computed({
+  get: () => instancesStore.tableSorting,
+  set: (val) => instancesStore.setTableSorting(val)
+})
 
 // Computed para ordenar instâncias (removido a ordenação manual pois o TanStack Table vai gerenciar)
 const sortedInstances = computed(() => {
@@ -77,15 +98,8 @@ const sortedInstances = computed(() => {
   return [...filteredInstances.value]
 })
 
-// Computed para contar status usando o store
-const statusCounts = computed(() => {
-  const filtered = filteredInstances.value
-  const connected = filtered.filter((i: Instance) => i.status.toLowerCase() === 'connected').length
-  const total = filtered.length
-  const disconnected = total - connected
-  
-  return { connected, disconnected, total }
-})
+// Computed para contar status usando o store (agora usa o getter da store para pegar totais reais)
+const statusCounts = computed(() => instancesStore.statusCounts)
 
 
 
@@ -110,6 +124,41 @@ const columns: TableColumn<Instance>[] = [
     cell: ({ row }) => {
       const instance = row.original
       return h('div', { class: 'font-mono text-sm' }, instance.owner)
+    }
+  },
+  {
+    accessorKey: 'created',
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted()
+      
+      return h(UButton, {
+        color: 'neutral',
+        variant: 'ghost',
+        label: 'Criada em',
+        icon: isSorted ? (isSorted === 'asc' ? 'i-lucide-arrow-up-narrow-wide' : 'i-lucide-arrow-down-wide-narrow') : 'i-lucide-arrow-up-down',
+        class: '-mx-2.5',
+        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc')
+      })
+    },
+    cell: ({ row }) => {
+      const instance = row.original
+      const createdDate = new Date(instance.created)
+      
+      return h('div', { class: 'text-sm' }, [
+        h('div', { class: 'font-medium' }, createdDate.toLocaleDateString('pt-BR')),
+        h('div', { class: 'text-xs text-gray-500 dark:text-gray-400' }, 
+          createdDate.toLocaleTimeString('pt-BR', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })
+        )
+      ])
+    },
+    meta: {
+      class: {
+        th: 'w-28',
+        td: 'w-28'
+      }
     }
   },
   {
@@ -176,41 +225,7 @@ const columns: TableColumn<Instance>[] = [
       }, () => getStatusLabel(instance.status))
     }
   },
-  {
-    accessorKey: 'created',
-    header: ({ column }) => {
-      const isSorted = column.getIsSorted()
-      
-      return h(UButton, {
-        color: 'neutral',
-        variant: 'ghost',
-        label: 'Criada em',
-        icon: isSorted ? (isSorted === 'asc' ? 'i-lucide-arrow-up-narrow-wide' : 'i-lucide-arrow-down-wide-narrow') : 'i-lucide-arrow-up-down',
-        class: '-mx-2.5',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc')
-      })
-    },
-    cell: ({ row }) => {
-      const instance = row.original
-      const createdDate = new Date(instance.created)
-      
-      return h('div', { class: 'text-sm' }, [
-        h('div', { class: 'font-medium' }, createdDate.toLocaleDateString('pt-BR')),
-        h('div', { class: 'text-xs text-gray-500 dark:text-gray-400' }, 
-          createdDate.toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          })
-        )
-      ])
-    },
-    meta: {
-      class: {
-        th: 'w-28',
-        td: 'w-28'
-      }
-    }
-  },
+
   {
     accessorKey: 'token',
     header: 'Token',
@@ -246,6 +261,50 @@ const columns: TableColumn<Instance>[] = [
           }
         })
       ])
+    }
+  },
+  {
+    accessorKey: 'lastDisconnect',
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted()
+      
+      return h(UButton, {
+        color: 'neutral',
+        variant: 'ghost',
+        label: 'Última Desconexão',
+        icon: isSorted ? (isSorted === 'asc' ? 'i-lucide-arrow-up-narrow-wide' : 'i-lucide-arrow-down-wide-narrow') : 'i-lucide-arrow-up-down',
+        class: '-mx-2.5',
+        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc')
+      })
+    },
+    cell: ({ row }) => {
+      const instance = row.original
+      
+      if (!instance.lastDisconnect) {
+        return h('span', { class: 'text-gray-400 text-sm' }, '-')
+      }
+      
+      const disconnectDate = new Date(instance.lastDisconnect)
+      // Verificar se a data é válida
+      if (isNaN(disconnectDate.getTime())) {
+        return h('span', { class: 'text-gray-400 text-sm' }, '-')
+      }
+
+      return h('div', { class: 'text-sm text-gray-600 dark:text-gray-400' }, [
+        h('div', { class: 'font-medium' }, disconnectDate.toLocaleDateString('pt-BR')),
+        h('div', { class: 'text-xs' }, 
+          disconnectDate.toLocaleTimeString('pt-BR', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })
+        )
+      ])
+    },
+    meta: {
+      class: {
+        th: 'w-36',
+        td: 'w-36'
+      }
     }
   }
 ]
@@ -340,17 +399,40 @@ const handleRestartServer = async () => {
 
 <template>
   <div class="space-y-4">
-    <!-- Badges com estatísticas -->
+    <!-- Badges com estatísticas / Filtros -->
     <div v-if="!loading && !error" class="flex items-center justify-end gap-2">
-      <UBadge variant="subtle" color="success">
+      <UButton 
+        :variant="statusFilter === 'connected' ? 'solid' : 'soft'" 
+        color="success"
+        size="xs"
+        class="cursor-pointer"
+        :icon="statusFilter === 'connected' ? 'i-lucide-check' : undefined"
+        @click="statusFilter = 'connected'"
+      >
         {{ statusCounts.connected }} conectada{{ statusCounts.connected !== 1 ? 's' : '' }}
-      </UBadge>
-      <UBadge variant="subtle" color="error">
+      </UButton>
+      
+      <UButton 
+        :variant="statusFilter === 'disconnected' ? 'solid' : 'soft'" 
+        color="error"
+        size="xs"
+        class="cursor-pointer"
+        :icon="statusFilter === 'disconnected' ? 'i-lucide-check' : undefined"
+        @click="statusFilter = 'disconnected'"
+      >
         {{ statusCounts.disconnected }} desconectada{{ statusCounts.disconnected !== 1 ? 's' : '' }}
-      </UBadge>
-      <UBadge variant="subtle" color="neutral">
-        {{ statusCounts.total }} total
-      </UBadge>
+      </UButton>
+
+      <UButton 
+        :variant="statusFilter === 'all' ? 'solid' : 'soft'" 
+        color="neutral"
+        size="xs"
+        class="cursor-pointer"
+        :icon="statusFilter === 'all' ? 'i-lucide-check' : undefined"
+        @click="statusFilter = 'all'"
+      >
+        {{ statusCounts.total }} Todas
+      </UButton>
     </div>
 
     <!-- Campo de pesquisa e botões -->
@@ -360,15 +442,15 @@ const handleRestartServer = async () => {
           v-model="searchQuery"
           placeholder="Pesquisar por nome, perfil ou token..."
           icon="i-lucide-search"
-          class="w-80"
+          class="w-96"
         />
         <UButton
-          v-if="searchQuery"
+          v-if="searchQuery || statusFilter !== 'all'"
           color="neutral"
           variant="ghost"
           icon="i-lucide-x"
           size="sm"
-          @click="searchQuery = ''"
+          @click="() => { searchQuery = ''; statusFilter = 'all' }"
         >
           Limpar
         </UButton>

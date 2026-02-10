@@ -5,13 +5,20 @@ interface InstancesState {
   instances: Instance[]
   loading: boolean
   error: string | null
+  // Estado da tabela persistido durante a sessão
+  tableSorting: { id: string; desc: boolean }[]
+  statusFilter: string // 'all', 'connected', 'disconnected', 'connecting'
+  searchQuery: string
 }
 
 export const useInstancesStore = defineStore('instances', {
   state: (): InstancesState => ({
     instances: [],
     loading: false,
-    error: null
+    error: null,
+    tableSorting: [{ id: 'created', desc: true }], // Default sort by created desc
+    statusFilter: 'all',
+    searchQuery: ''
   }),
 
   getters: {
@@ -41,21 +48,28 @@ export const useInstancesStore = defineStore('instances', {
       return { connected, disconnected, total }
     },
 
-    // Getter para filtrar instâncias por texto
+    // Getter para filtrar instâncias por texto e status
     filteredInstances: (state) => {
-      return (searchQuery: string): Instance[] => {
-        if (!searchQuery.trim()) {
-          return [...state.instances]
-        }
+      let result = [...state.instances]
 
-        const query = searchQuery.toLowerCase().trim()
+      // Filtrar por status
+      if (state.statusFilter !== 'all') {
+        result = result.filter(instance =>
+          instance.status.toLowerCase() === state.statusFilter.toLowerCase()
+        )
+      }
 
-        return state.instances.filter(instance =>
+      // Filtrar por texto (se houver)
+      if (state.searchQuery.trim()) {
+        const query = state.searchQuery.toLowerCase().trim()
+        result = result.filter(instance =>
           instance.name.toLowerCase().includes(query) ||
           (instance.profileName || '').toLowerCase().includes(query) ||
           instance.token.toLowerCase().includes(query)
         )
       }
+
+      return result
     }
   },
 
@@ -94,6 +108,19 @@ export const useInstancesStore = defineStore('instances', {
     // Ação para definir erro
     setError(error: string | null) {
       this.error = error
+    },
+
+    // Actions para controle da tabela
+    setTableSorting(sorting: { id: string; desc: boolean }[]) {
+      this.tableSorting = sorting
+    },
+
+    setStatusFilter(status: string) {
+      this.statusFilter = status
+    },
+
+    setSearchQuery(query: string) {
+      this.searchQuery = query
     },
 
     // Ação para limpar instâncias
